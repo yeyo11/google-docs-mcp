@@ -3,6 +3,7 @@ name: Publish to npm
 on:
   release:
     types: [published]
+  workflow_dispatch: # manual publish of whatever is on the selected branch
 
 permissions:
   contents: read

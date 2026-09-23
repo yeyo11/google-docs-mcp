@@ -53,7 +53,7 @@ Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`.
 1. Update `CHANGELOG.md` and bump the version: `npm version <patch|minor|major>` (creates the commit and tag).
 2. `git push --follow-tags`.
 3. Publish a GitHub release for the tag. The *Publish to npm* workflow then publishes the package with provenance
-   using the `NPM_TOKEN` repository secret.
+   using the `NPM_TOKEN` repository secret. It can also be run manually from the Actions tab (`workflow_dispatch`).
 
 ## Reporting bugs
 
