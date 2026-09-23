@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Published to npm as `@yeyo11/google-docs-mcp`, so the server runs with `npx -y @yeyo11/google-docs-mcp`
+  and no clone/build step.
+- Release workflow that publishes to npm with provenance whenever a GitHub release is published.
+
 ## [0.1.0] - 2026-09-23
 
 ### Added

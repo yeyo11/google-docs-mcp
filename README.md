@@ -1,6 +1,7 @@
 # google-docs-mcp
 
 [![CI](https://github.com/yeyo11/google-docs-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/yeyo11/google-docs-mcp/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/%40yeyo11%2Fgoogle-docs-mcp)](https://www.npmjs.com/package/@yeyo11/google-docs-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js >= 20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![MCP](https://img.shields.io/badge/MCP-compatible-8A2BE2)](https://modelcontextprotocol.io)
@@ -85,26 +86,19 @@ export GOOGLE_CLIENT_ID="...apps.googleusercontent.com"
 export GOOGLE_CLIENT_SECRET="..."
 ```
 
-### 2. Install and build
+### 2. Sign in with Google
 
 ```bash
-git clone https://github.com/yeyo11/google-docs-mcp.git
-cd google-docs-mcp
-npm install
-npm run build
-```
-
-### 3. Sign in with Google
-
-```bash
-npm run auth
+npx -y -p @yeyo11/google-docs-mcp google-docs-mcp-auth
 ```
 
 Your browser opens (or the URL is printed so you can paste it). Google asks for **read-only** access to Drive and
-Docs. Tokens are saved to `~/.config/google-docs-mcp/token.json` with `0600` permissions. Run `npm run auth` again
-to switch accounts.
+Docs. Tokens are saved to `~/.config/google-docs-mcp/token.json` with `0600` permissions. Run the same command
+again to switch accounts.
 
-### 4. Register the server with your MCP client
+### 3. Register the server with your MCP client
+
+No clone or build step is needed; `npx` fetches the package on first use.
 
 **Claude Desktop** (`claude_desktop_config.json`):
 
@@ -112,8 +106,8 @@ to switch accounts.
 {
   "mcpServers": {
     "google-docs": {
-      "command": "node",
-      "args": ["/absolute/path/to/google-docs-mcp/dist/index.js"]
+      "command": "npx",
+      "args": ["-y", "@yeyo11/google-docs-mcp"]
     }
   }
 }
@@ -122,13 +116,28 @@ to switch accounts.
 **Claude Code**:
 
 ```bash
-claude mcp add google-docs -- node /absolute/path/to/google-docs-mcp/dist/index.js
+claude mcp add google-docs -- npx -y @yeyo11/google-docs-mcp
 ```
 
 Any other MCP client that supports stdio servers works the same way. If you use environment variables for the OAuth
 client, add them to the `env` block of your client configuration.
 
-### 5. Ask away
+<details>
+<summary>Running from source instead</summary>
+
+```bash
+git clone https://github.com/yeyo11/google-docs-mcp.git
+cd google-docs-mcp
+npm install
+npm run build
+npm run auth
+```
+
+Then point your MCP client at `node /absolute/path/to/google-docs-mcp/dist/index.js`.
+
+</details>
+
+### 4. Ask away
 
 > "Summarize the open comments in https://docs.google.com/document/d/…/edit and tell me which ones are waiting on me."
 
@@ -186,7 +195,6 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md).
 - [ ] Optional write tools (reply, resolve) behind an explicit opt-in scope
 - [ ] Multiple accounts / profiles
 - [ ] Streamable HTTP transport for remote deployments
-- [ ] npm package (`npx google-docs-mcp`)
 
 ## License
 

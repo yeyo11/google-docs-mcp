@@ -48,6 +48,13 @@ chore: bump googleapis
 
 Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`.
 
+## Releasing (maintainers)
+
+1. Update `CHANGELOG.md` and bump the version: `npm version <patch|minor|major>` (creates the commit and tag).
+2. `git push --follow-tags`.
+3. Publish a GitHub release for the tag. The *Publish to npm* workflow then publishes the package with provenance
+   using the `NPM_TOKEN` repository secret.
+
 ## Reporting bugs
 
 Open an issue with the tool you called, the arguments (redact document IDs if needed), the error text returned,
