@@ -1,0 +1,62 @@
+{
+  "name": "google-docs-mcp",
+  "version": "0.1.0",
+  "description": "Read-only MCP server for Google Docs that explains a document's comments in detail: authors, dates, status, quoted text and full reply threads. OAuth 2.0 sign-in.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "google-docs",
+    "google-drive",
+    "comments",
+    "oauth2",
+    "read-only",
+    "claude",
+    "llm",
+    "ai-tools"
+  ],
+  "homepage": "https://github.com/yeyo11/google-docs-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/yeyo11/google-docs-mcp/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yeyo11/google-docs-mcp.git"
+  },
+  "license": "MIT",
+  "author": "Jose Antonio Garrido (https://github.com/yeyo11)",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "google-docs-mcp": "dist/index.js",
+    "google-docs-mcp-auth": "dist/cli-auth.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "auth": "tsx src/cli-auth.ts",
+    "test": "tsx scripts/smoke.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "google-auth-library": "^11.1.0",
+    "googleapis": "^181.0.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

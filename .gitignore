@@ -1,0 +1,17 @@
+# Dependencies and build output
+node_modules/
+dist/
+
+# Logs and local env
+*.log
+.env
+.env.*
+
+# OAuth credentials: never commit these
+credentials.json
+token.json
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
