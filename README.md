@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js >= 20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![MCP](https://img.shields.io/badge/MCP-compatible-8A2BE2)](https://modelcontextprotocol.io)
+[![yeyo11/google-docs-mcp MCP server](https://glama.ai/mcp/servers/yeyo11/google-docs-mcp/badges/score.svg)](https://glama.ai/mcp/servers/yeyo11/google-docs-mcp)
 
 A **read-only** [Model Context Protocol](https://modelcontextprotocol.io) server for Google Docs.
 Its job is to explain a document's **comments** to an AI assistant (Claude or any MCP client) in full detail:
