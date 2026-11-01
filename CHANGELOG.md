@@ -7,8 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-01
+
 ### Added
 
+- `mcpName` in `package.json` and a `server.json`, so the server can be published to the official
+  [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.yeyo11/google-docs-mcp`.
+- `glama.json`, so the maintainer can claim the server's listing on [Glama](https://glama.ai/mcp/servers).
 - Published to npm as `@yeyo11/google-docs-mcp`, so the server runs with `npx -y @yeyo11/google-docs-mcp`
   and no clone/build step.
 - Release workflow that publishes to npm with provenance whenever a GitHub release is published.
@@ -25,5 +30,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Comment summary: counts by status, participants, unanswered comments, comments awaiting the original author.
 - Smoke test that runs without Google credentials.
 
-[Unreleased]: https://github.com/yeyo11/google-docs-mcp/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/yeyo11/google-docs-mcp/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/yeyo11/google-docs-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/yeyo11/google-docs-mcp/releases/tag/v0.1.0
