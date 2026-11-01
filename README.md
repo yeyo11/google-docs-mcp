@@ -17,6 +17,9 @@ and who resolved it.
   Tokens are stored locally and refreshed automatically.
 - **Zero configuration for the assistant.** Tools accept a document ID *or* a full Google Docs URL.
 
+Built by José Antonio Garrido. I write about the developer tools I build on my blog,
+[josegarrido.dev](https://josegarrido.dev/en/?utm_source=github&utm_medium=referral&utm_campaign=google-docs-mcp-readme).
+
 ## Tools
 
 | Tool | What it does |
