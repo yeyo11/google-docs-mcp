@@ -1,6 +1,7 @@
 {
   "name": "@yeyo11/google-docs-mcp",
   "version": "0.1.0",
+  "mcpName": "io.github.yeyo11/google-docs-mcp",
   "description": "Read-only MCP server for Google Docs that explains a document's comments in detail: authors, dates, status, quoted text and full reply threads. OAuth 2.0 sign-in.",
   "keywords": [
     "mcp",
