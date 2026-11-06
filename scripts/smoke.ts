@@ -9,8 +9,15 @@ import os from "node:os";
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import type { docs_v1, drive_v3 } from "googleapis";
 import { signInCommand } from "../src/config.js";
-import { normalizeComment, findContext, parseDocumentId } from "../src/google.js";
+import {
+  getDocumentInfo,
+  normalizeComment,
+  findContext,
+  parseDocumentId,
+  readDocument,
+} from "../src/google.js";
 import { formatComment, formatSummary } from "../src/format.js";
 import { summarizeComments } from "../src/summary.js";
 
@@ -144,7 +151,39 @@ function testSignInCommand(): void {
   console.log("✔ sign-in command: npx for an installed package, npm run auth for a clone");
 }
 
+/** A Drive stub that, like the real API, returns only the fields it was asked for. */
+function fakeDrive(mimeType: string): drive_v3.Drive {
+  const file: Record<string, string> = { id: "file1", name: "Budget", mimeType };
+  const get = async ({ fields }: { fields: string }) => ({
+    data: Object.fromEntries(Object.entries(file).filter(([key]) => fields.split(",").includes(key))),
+  });
+  return { files: { get } } as unknown as drive_v3.Drive;
+}
+
+async function testNotAGoogleDoc(): Promise<void> {
+  const doc = "application/vnd.google-apps.document";
+  const sheet = "application/vnd.google-apps.spreadsheet";
+
+  assert.equal((await getDocumentInfo(fakeDrive(doc), "file1")).name, "Budget");
+  await assert.rejects(getDocumentInfo(fakeDrive(sheet), "file1"), /not a Google Doc \(mimeType .*spreadsheet\)/);
+
+  // The Docs API has its own error for a Sheet: the check must answer first, not race it.
+  let docsCalls = 0;
+  const docs = {
+    documents: {
+      get: async () => {
+        docsCalls += 1;
+        throw new Error("Docs API error");
+      },
+    },
+  } as unknown as docs_v1.Docs;
+  await assert.rejects(readDocument({ drive: fakeDrive(sheet), docs }, "file1", true), /not a Google Doc/);
+  assert.equal(docsCalls, 0);
+  console.log("✔ file type: a bare ID of another file type is refused before reading it");
+}
+
 testFormatting();
 testSignInCommand();
+await testNotAGoogleDoc();
 await testServerWithoutCredentials();
 console.log("All smoke checks passed.");

@@ -21,6 +21,7 @@ import {
   listCommentsPage,
   listDocuments,
   parseDocumentId,
+  readDocument,
   type DocComment,
 } from "./google.js";
 import { summarizeComments } from "./summary.js";
@@ -149,11 +150,7 @@ export function registerTools(server: McpServer): void {
     },
     safe(async ({ document, include_content, max_chars }) => {
       const id = parseDocumentId(document);
-      const { drive, docs } = await getClients();
-      const [info, content] = await Promise.all([
-        getDocumentInfo(drive, id),
-        include_content ? getDocumentText(docs, id) : Promise.resolve(undefined),
-      ]);
+      const { info, content } = await readDocument(await getClients(), id, include_content);
       return text(formatDocument(info, content, max_chars));
     }),
   );

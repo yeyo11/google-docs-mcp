@@ -142,7 +142,7 @@ export function normalizeComment(c: drive_v3.Schema$Comment): DocComment {
 // ---------------------------------------------------------------------------
 
 const FILE_FIELDS =
-  "id,name,createdTime,modifiedTime,webViewLink,owners(displayName,emailAddress,me),lastModifyingUser(displayName,emailAddress,me)";
+  "id,name,mimeType,createdTime,modifiedTime,webViewLink,owners(displayName,emailAddress,me),lastModifyingUser(displayName,emailAddress,me)";
 
 const COMMENT_FIELDS =
   "id,createdTime,modifiedTime,resolved,deleted,content,quotedFileContent(value),author(displayName,emailAddress,me)," +
@@ -303,6 +303,16 @@ export async function getDocumentText(docs: docs_v1.Docs, documentId: string): P
     paragraphs,
     text: paragraphs.join("\n"),
   };
+}
+
+/** Metadata first: the file-type check answers before the Docs API can fail on a file that isn't a Doc. */
+export async function readDocument(
+  { drive, docs }: Clients,
+  documentId: string,
+  includeContent: boolean,
+): Promise<{ info: DocumentInfo; content?: DocumentText }> {
+  const info = await getDocumentInfo(drive, documentId);
+  return includeContent ? { info, content: await getDocumentText(docs, documentId) } : { info };
 }
 
 const CONTEXT_MAX_CHARS = 600;
