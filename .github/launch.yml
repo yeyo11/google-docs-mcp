@@ -1,0 +1,21 @@
+# How Shipcast launches this project: https://github.com/yeyo11/shipcast/blob/main/docs/launch-yml.md
+enabled: true
+brand: personal
+language: en
+
+publishing:
+  blog: approval
+  newsletter: approval
+  linkedin: approval
+  bluesky: approval
+  mastodon: approval
+  threads: approval
+  telegram: approval
+  discord: approval
+  # dev.to does not take AI-assisted posts that mainly promote the author's own project
+  devto: off
+  instagram: off
+  # The project has no demo video yet, and Discussions are off on this repo
+  youtube: off
+  githubDiscussions: off
+  reddit: off
