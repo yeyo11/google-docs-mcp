@@ -5,12 +5,13 @@
  *  3. Exercises comment normalization, summary and formatting with fixture data.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import type { docs_v1, drive_v3 } from "googleapis";
-import { signInCommand } from "../src/config.js";
+import { SERVER_VERSION, signInCommand } from "../src/config.js";
 import {
   getDocumentInfo,
   normalizeComment,
@@ -213,10 +214,29 @@ function testContextLimits(): void {
   console.log("✔ context lookup limits: first match, 8-character minimum, 600-character trim");
 }
 
+function testVersionsAgree(): void {
+  const read = (file: string) => JSON.parse(readFileSync(path.join(here, "..", file), "utf8"));
+  const pkg = read("package.json");
+  const lock = read("package-lock.json");
+  const registry = read("server.json");
+  const versions = {
+    "package-lock.json": lock.version,
+    'package-lock.json packages[""]': lock.packages[""].version,
+    "server.json": registry.version,
+    "server.json packages[0]": registry.packages[0].version,
+    "src/config.ts": SERVER_VERSION,
+  };
+  for (const [where, version] of Object.entries(versions)) {
+    assert.equal(version, pkg.version, `${where} must match package.json`);
+  }
+  console.log(`✔ versions: ${pkg.version} everywhere`);
+}
+
 testFormatting();
 testSignInCommand();
 await testNotAGoogleDoc();
 testCommentAuthorsWithoutEmail();
 testContextLimits();
+testVersionsAgree();
 await testServerWithoutCredentials();
 console.log("All smoke checks passed.");

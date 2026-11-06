@@ -24,7 +24,7 @@ export const TOKEN_PATH =
   process.env.GOOGLE_DOCS_MCP_TOKEN_PATH ?? path.join(CONFIG_DIR, "token.json");
 
 export const SERVER_NAME = "google-docs-mcp";
-export const SERVER_VERSION = "0.1.1";
+export const SERVER_VERSION = "0.1.2";
 
 /**
  * How to sign in, for the messages shown to the user. An installed package (npx, global or local) always lives
