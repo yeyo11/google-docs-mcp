@@ -1,5 +1,6 @@
 import { google, type docs_v1, type drive_v3 } from "googleapis";
 import { AuthError, getAuthorizedClient } from "./auth.js";
+import { signInCommand } from "./config.js";
 
 // ---------------------------------------------------------------------------
 // Clients
@@ -354,7 +355,7 @@ export function describeError(err: unknown): string {
 
   switch (status) {
     case 401:
-      return `Google rejected the credentials (401). Re-run \`npm run auth\`. Details: ${apiMessage}`;
+      return `Google rejected the credentials (401). Run ${signInCommand()} to sign in again. Details: ${apiMessage}`;
     case 403:
       return (
         `Access denied (403). Check that the signed-in account can view the document and that the ` +

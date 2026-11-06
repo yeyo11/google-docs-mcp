@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { SERVER_NAME, SERVER_VERSION } from "./config.js";
+import { SERVER_NAME, SERVER_VERSION, signInCommand } from "./config.js";
 import { registerTools } from "./tools.js";
 
 const server = new McpServer(
@@ -11,7 +11,7 @@ const server = new McpServer(
       "Read-only access to the user's Google Docs. The main purpose of this server is to describe the comments " +
       "of a document in detail (authors, dates, status, quoted text, reply threads). Start with list_documents " +
       "to find a document, then list_comments or get_comments_summary. Nothing here can modify Google data. " +
-      "If a tool reports that the server is not signed in, ask the user to run `npm run auth`.",
+      `If a tool reports that the server is not signed in, ask the user to run ${signInCommand()}.`,
   },
 );
 

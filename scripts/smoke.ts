@@ -9,6 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { signInCommand } from "../src/config.js";
 import { normalizeComment, findContext, parseDocumentId } from "../src/google.js";
 import { formatComment, formatSummary } from "../src/format.js";
 import { summarizeComments } from "../src/summary.js";
@@ -43,6 +44,7 @@ async function testServerWithoutCredentials(): Promise<void> {
   const status = await client.callTool({ name: "get_auth_status", arguments: {} });
   const statusText = (status.content as Array<{ type: string; text?: string }>)[0]?.text ?? "";
   assert.match(statusText, /Not signed in/);
+  assert.match(statusText, /`npm run auth`/); // this test runs from a clone
 
   const list = await client.callTool({
     name: "list_comments",
@@ -133,6 +135,16 @@ function testFormatting(): void {
   console.log("✔ formatting: normalize, context lookup, markdown and summary");
 }
 
+function testSignInCommand(): void {
+  const npx = /^`npx -y -p @yeyo11\/google-docs-mcp google-docs-mcp-auth`/;
+  assert.match(signInCommand("/home/a/.npm/_npx/f3c/node_modules/@yeyo11/google-docs-mcp/dist/config.js"), npx);
+  assert.match(signInCommand("C:\\Users\\a\\node_modules\\@yeyo11\\google-docs-mcp\\dist\\config.js"), npx);
+  assert.match(signInCommand("/home/a/code/google-docs-mcp/dist/config.js"), /^`npm run auth`/);
+  assert.match(signInCommand("/home/a/code/google-docs-mcp/src/config.ts"), /^`npm run auth`/);
+  console.log("✔ sign-in command: npx for an installed package, npm run auth for a clone");
+}
+
 testFormatting();
+testSignInCommand();
 await testServerWithoutCredentials();
 console.log("All smoke checks passed.");

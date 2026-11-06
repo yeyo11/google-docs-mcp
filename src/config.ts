@@ -1,5 +1,6 @@
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * Read-only scopes. The server never requests write permissions; a stored token
@@ -24,3 +25,13 @@ export const TOKEN_PATH =
 
 export const SERVER_NAME = "google-docs-mcp";
 export const SERVER_VERSION = "0.1.1";
+
+/**
+ * How to sign in, for the messages shown to the user. An installed package (npx, global or local) always lives
+ * under node_modules and has no `auth` script of its own; anything else is a clone of the repository.
+ */
+export function signInCommand(modulePath: string = fileURLToPath(import.meta.url)): string {
+  return /[\\/]node_modules[\\/]/.test(modulePath)
+    ? "`npx -y -p @yeyo11/google-docs-mcp google-docs-mcp-auth` in a terminal"
+    : "`npm run auth` in the google-docs-mcp directory";
+}

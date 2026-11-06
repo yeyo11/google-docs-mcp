@@ -93,7 +93,7 @@ async function main(): Promise<void> {
   const { tokens } = await client.getToken({ code, codeVerifier });
   if (!tokens.refresh_token) {
     throw new Error(
-      "Google did not return a refresh_token. Revoke the app at https://myaccount.google.com/permissions and run auth again.",
+      "Google did not return a refresh_token. Revoke the app at https://myaccount.google.com/permissions and run this command again.",
     );
   }
   const missing = missingScopes(tokens.scope);

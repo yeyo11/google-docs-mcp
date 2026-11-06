@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { OAuth2Client, type Credentials } from "google-auth-library";
-import { CREDENTIALS_PATH, SCOPES, SERVER_NAME, TOKEN_PATH } from "./config.js";
+import { CREDENTIALS_PATH, SCOPES, SERVER_NAME, signInCommand, TOKEN_PATH } from "./config.js";
 
 export interface ClientSecrets {
   clientId: string;
@@ -12,8 +12,7 @@ export class AuthError extends Error {
   override name = "AuthError";
 }
 
-const AUTH_HINT =
-  "Run `npm run auth` (or `google-docs-mcp-auth`) in a terminal to sign in with Google.";
+const AUTH_HINT = `Run ${signInCommand()} to sign in with Google.`;
 
 /**
  * Loads client_id/client_secret from environment variables or from the JSON

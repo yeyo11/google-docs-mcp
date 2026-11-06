@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { readStoredTokens } from "./auth.js";
-import { SCOPES, TOKEN_PATH } from "./config.js";
+import { SCOPES, signInCommand, TOKEN_PATH } from "./config.js";
 import {
   formatComment,
   formatCommentList,
@@ -77,7 +77,7 @@ export function registerTools(server: McpServer): void {
       if (!stored?.refresh_token) {
         return text(
           `Not signed in. No credentials at ${TOKEN_PATH}.\n` +
-            "Ask the user to run `npm run auth` in the google-docs-mcp directory to sign in with Google (read-only access).",
+            `Ask the user to run ${signInCommand()} to sign in with Google (read-only access).`,
         );
       }
       const { drive } = await getClients();
