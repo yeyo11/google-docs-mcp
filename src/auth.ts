@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { OAuth2Client, type Credentials } from "google-auth-library";
-import { CREDENTIALS_PATH, SCOPES, SERVER_NAME, TOKEN_PATH } from "./config.js";
+import { CREDENTIALS_PATH, SCOPES, SERVER_NAME, signInCommand, TOKEN_PATH } from "./config.js";
 
 export interface ClientSecrets {
   clientId: string;
@@ -12,8 +12,7 @@ export class AuthError extends Error {
   override name = "AuthError";
 }
 
-const AUTH_HINT =
-  "Run `npm run auth` (or `google-docs-mcp-auth`) in a terminal to sign in with Google.";
+const AUTH_HINT = `Run ${signInCommand()} to sign in with Google.`;
 
 /**
  * Loads client_id/client_secret from environment variables or from the JSON
@@ -87,6 +86,11 @@ export function getAuthorizedClient(): Promise<OAuth2Client> {
     throw err;
   });
   return cachedClient;
+}
+
+/** Makes the next call read the token file again, so a new sign-in works without restarting the server. */
+export function resetAuthorizedClient(): void {
+  cachedClient = undefined;
 }
 
 async function buildAuthorizedClient(): Promise<OAuth2Client> {

@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { readStoredTokens } from "./auth.js";
-import { SCOPES, TOKEN_PATH } from "./config.js";
+import { SCOPES, signInCommand, TOKEN_PATH } from "./config.js";
 import {
   formatComment,
   formatCommentList,
@@ -20,7 +20,10 @@ import {
   listAllComments,
   listCommentsPage,
   listDocuments,
+  needsNewSignIn,
   parseDocumentId,
+  readDocument,
+  resetClients,
   type DocComment,
 } from "./google.js";
 import { summarizeComments } from "./summary.js";
@@ -52,6 +55,7 @@ function safe<A>(fn: (args: A) => Promise<CallToolResult>): (args: A) => Promise
     try {
       return await fn(args);
     } catch (err) {
+      if (needsNewSignIn(err)) resetClients();
       return { isError: true, content: [{ type: "text", text: describeError(err) }] };
     }
   };
@@ -77,7 +81,7 @@ export function registerTools(server: McpServer): void {
       if (!stored?.refresh_token) {
         return text(
           `Not signed in. No credentials at ${TOKEN_PATH}.\n` +
-            "Ask the user to run `npm run auth` in the google-docs-mcp directory to sign in with Google (read-only access).",
+            `Ask the user to run ${signInCommand()} to sign in with Google (read-only access).`,
         );
       }
       const { drive } = await getClients();
@@ -149,11 +153,7 @@ export function registerTools(server: McpServer): void {
     },
     safe(async ({ document, include_content, max_chars }) => {
       const id = parseDocumentId(document);
-      const { drive, docs } = await getClients();
-      const [info, content] = await Promise.all([
-        getDocumentInfo(drive, id),
-        include_content ? getDocumentText(docs, id) : Promise.resolve(undefined),
-      ]);
+      const { info, content } = await readDocument(await getClients(), id, include_content);
       return text(formatDocument(info, content, max_chars));
     }),
   );

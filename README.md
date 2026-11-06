@@ -15,7 +15,8 @@ and who resolved it.
 - **Read-only by design.** It only requests the `documents.readonly` and `drive.readonly` scopes. There is no tool
   that creates, edits, resolves or deletes anything, and every tool is advertised with `readOnlyHint: true`.
 - **OAuth 2.0 sign-in.** Users authenticate with their own Google account through the desktop-app flow with PKCE.
-  Tokens are stored locally and refreshed automatically.
+  Tokens are stored locally and refreshed automatically (see the
+  [seven-day exception](#1-create-an-oauth-client-in-google-cloud) for External apps in Testing mode).
 - **Zero configuration for the assistant.** Tools accept a document ID *or* a full Google Docs URL.
 
 Built by José Antonio Garrido. I write about the developer tools I build on my blog,
@@ -43,7 +44,7 @@ Built by José Antonio Garrido. I write about the developer tools I build on my 
 
 ## Comments (all): 2
 
-### [1] 🟢 OPEN — Ana <ana@example.com> · 2026-09-22 08:00 UTC
+### [1] 🟢 OPEN — Ana · 2026-09-22 08:00 UTC
 
 **Quoted text (what the comment refers to):**
 > delivery date
@@ -58,14 +59,19 @@ _No replies yet._
 
 Comment ID: `AAAAxyz`
 
-### [2] ✅ RESOLVED — Ana <ana@example.com> · 2026-09-20 10:32 UTC
+### [2] ✅ RESOLVED — Ana · 2026-09-20 10:32 UTC
 ...
 **Thread (2 replies):**
-  - Jose <jose@example.com> (you) · 2026-09-21 09:00 UTC: Yes, moving it.
-  - Jose <jose@example.com> (you) · 2026-09-21 12:00 UTC — marked as RESOLVED
+  - Jose (you) · 2026-09-21 09:00 UTC: Yes, moving it.
+  - Jose (you) · 2026-09-21 12:00 UTC — marked as RESOLVED
 
-Resolved by Jose <jose@example.com> (you) on 2026-09-21 12:00 UTC.
+Resolved by Jose (you) on 2026-09-21 12:00 UTC.
 ```
+
+Comment and reply authors appear by display name: the Drive API
+[doesn't populate their email address](https://developers.google.com/workspace/drive/api/reference/rest/v3/comments).
+A document's owner and last editor show an email when Google
+[makes it visible](https://developers.google.com/workspace/drive/api/reference/rest/v3/User) to you.
 
 ## Quick start
 
@@ -82,6 +88,16 @@ Resolved by Jose <jose@example.com> (you) on 2026-09-21 12:00 UTC.
    *External* apps in testing mode, add your account as a test user.
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID**, application type **Desktop app**.
 5. Download the JSON and save it as `~/.config/google-docs-mcp/credentials.json`.
+
+> **External apps in Testing mode have to sign in again every seven days.** With an *External* consent screen whose
+> publishing status is *Testing*, Google
+> [issues a refresh token that expires in 7 days](https://developers.google.com/identity/protocols/oauth2#expiration),
+> so automatic renewal stops working and tools report that the sign-in expired until you repeat step 2. The running
+> server picks up the new sign-in without a restart. An *Internal* consent screen (Workspace organizations only) doesn't
+> have this limit. Neither does publishing the app (*In production*), but `drive.readonly` is a restricted scope, so
+> Google then
+> [shows an unverified-app warning and caps the project at 100 users](https://support.google.com/cloud/answer/15549945)
+> unless the app is verified.
 
 You can use environment variables instead of the file:
 
@@ -187,12 +203,30 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and commit conventions.
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
-## Limitations (v0.1)
+## Limits
 
-- Read-only: comments cannot be created, replied to or resolved.
-- One Google account per installation (switch with `npm run auth`).
-- The surrounding paragraph is located by searching for the quoted text; if that text was edited after the comment
-  was made, it may not be found.
+- **Read-only.** It can't create, reply to or resolve comments, or edit documents.
+- **Google Docs only.** Sheets, Slides and other file types are refused, by URL and by bare ID.
+- **Suggestions, assignments and mentions aren't read as such.** A comment is its text, status and thread: an assigned
+  comment looks like any other and a mention is just part of the text. Depending on your access, text pending as a
+  suggestion [can appear](https://developers.google.com/workspace/docs/api/how-tos/suggestions) in `get_document` as
+  ordinary text.
+- **Comment authors are told apart by display name**, since Drive doesn't return their email. In
+  `get_comments_summary`, two people with the same name count as one.
+- **`get_document` returns plain body text** from all tabs, tables included: no formatting, images, smart chips, headers,
+  footers or footnotes. 20,000 characters by default, 500,000 at most (`max_chars`).
+- **The surrounding paragraph is found by searching for the quoted text.** It takes the first match, so a repeated
+  phrase can point to the wrong paragraph, and it may be missed if the text was edited after the comment. Quotes under
+  8 characters get no paragraph, and paragraphs over 600 characters are trimmed.
+- **`list_comments` pages by 100.** Use `page_token` for the rest. The `status` filter applies to each page, so a page
+  can come back short or empty while more remain. `get_comments_summary` reads every page.
+- **One Google account per installation.** Run the sign-in command again to switch.
+- **Local stdio only.** There is no remote or HTTP transport.
+- **Tokens are stored unencrypted** in `token.json`, with `0600` permissions.
+- **`drive.readonly` covers all of Drive the account can see**, not only Docs. The tools read Docs only, but that is
+  what you grant on Google's sign-in screen and what the stored token allows.
+- **What a tool returns reaches the assistant.** Document text, comments, names and email addresses go to whichever
+  assistant and model provider you use. Text written by other people arrives as is, so treat it as untrusted.
 
 ## Roadmap
 

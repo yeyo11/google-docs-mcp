@@ -5,11 +5,21 @@
  *  3. Exercises comment normalization, summary and formatting with fixture data.
  */
 import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { normalizeComment, findContext, parseDocumentId } from "../src/google.js";
+import type { docs_v1, drive_v3 } from "googleapis";
+import { SCOPES, SERVER_VERSION, signInCommand } from "../src/config.js";
+import {
+  describeError,
+  getDocumentInfo,
+  normalizeComment,
+  findContext,
+  parseDocumentId,
+  readDocument,
+} from "../src/google.js";
 import { formatComment, formatSummary } from "../src/format.js";
 import { summarizeComments } from "../src/summary.js";
 
@@ -43,6 +53,7 @@ async function testServerWithoutCredentials(): Promise<void> {
   const status = await client.callTool({ name: "get_auth_status", arguments: {} });
   const statusText = (status.content as Array<{ type: string; text?: string }>)[0]?.text ?? "";
   assert.match(statusText, /Not signed in/);
+  assert.match(statusText, /`npm run auth`/); // this test runs from a clone
 
   const list = await client.callTool({
     name: "list_comments",
@@ -57,6 +68,70 @@ async function testServerWithoutCredentials(): Promise<void> {
 
   await client.close();
   console.log(`✔ server: ${tools.length} read-only tools, auth errors handled gracefully`);
+}
+
+/** Over stdio, with Google's endpoints stubbed: an expired sign-in, then signing in again without a restart. */
+async function testExpiredSignIn(): Promise<void> {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "gdocs-mcp-smoke-"));
+  const writeToken = (refresh_token: string) =>
+    writeFileSync(
+      path.join(dir, "token.json"),
+      JSON.stringify({ refresh_token, scope: SCOPES.join(" "), token_type: "Bearer" }),
+    );
+  writeToken("expired");
+
+  const transport = new StdioClientTransport({
+    command: "node",
+    args: [
+      "--import",
+      "tsx",
+      "--import",
+      path.join(here, "fixtures", "fake-google.mjs"),
+      path.join(here, "..", "src", "index.ts"),
+    ],
+    env: {
+      PATH: process.env.PATH ?? "",
+      GOOGLE_DOCS_MCP_CONFIG_DIR: dir,
+      GOOGLE_CLIENT_ID: "fake-client",
+      GOOGLE_CLIENT_SECRET: "fake-secret",
+    },
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "smoke", version: "0.0.0" });
+  await client.connect(transport);
+  const status = async () => {
+    const res = await client.callTool({ name: "get_auth_status", arguments: {} });
+    return { isError: res.isError, text: (res.content as Array<{ text?: string }>)[0]?.text ?? "" };
+  };
+
+  try {
+    const expired = await status();
+    assert.equal(expired.isError, true);
+    assert.match(expired.text, /sign-in has expired or was revoked/);
+    assert.match(expired.text, /`npm run auth`/); // this test runs from a clone
+
+    // The user signs in from a terminal: the running server has to pick up the new token.
+    writeToken("valid");
+    const renewed = await status();
+    assert.equal(renewed.isError, undefined, renewed.text);
+    assert.match(renewed.text, /Signed in as Ana/);
+  } finally {
+    await client.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+  console.log("✔ expired sign-in: invalid_grant gives the sign-in command, and a new sign-in works without a restart");
+}
+
+function testExpiredSignInMessage(): void {
+  // error_subtype is how Google reports a session control policy; the library puts the whole body in the message.
+  const reauth = { message: '{"error":"invalid_grant","error_subtype":"invalid_rapt"}', response: { status: 400 } };
+  const plain = { message: "invalid_grant", response: { status: 400, data: { error: "invalid_grant" } } };
+  for (const err of [reauth, plain]) {
+    assert.match(describeError(err), /sign-in has expired or was revoked/);
+    assert.match(describeError(err), /seven days/);
+  }
+  assert.doesNotMatch(describeError({ message: "boom", response: { status: 400 } }), /sign-in/);
+  console.log("✔ expired sign-in message: every shape of invalid_grant");
 }
 
 function testFormatting(): void {
@@ -133,6 +208,128 @@ function testFormatting(): void {
   console.log("✔ formatting: normalize, context lookup, markdown and summary");
 }
 
+function testSignInCommand(): void {
+  const npx = /^`npx -y -p @yeyo11\/google-docs-mcp google-docs-mcp-auth`/;
+  assert.match(signInCommand("/home/a/.npm/_npx/f3c/node_modules/@yeyo11/google-docs-mcp/dist/config.js"), npx);
+  assert.match(signInCommand("C:\\Users\\a\\node_modules\\@yeyo11\\google-docs-mcp\\dist\\config.js"), npx);
+  assert.match(signInCommand("/home/a/code/google-docs-mcp/dist/config.js"), /^`npm run auth`/);
+  assert.match(signInCommand("/home/a/code/google-docs-mcp/src/config.ts"), /^`npm run auth`/);
+  console.log("✔ sign-in command: npx for an installed package, npm run auth for a clone");
+}
+
+/** A Drive stub that, like the real API, returns only the fields it was asked for. */
+function fakeDrive(mimeType: string): drive_v3.Drive {
+  const file: Record<string, string> = { id: "file1", name: "Budget", mimeType };
+  const get = async ({ fields }: { fields: string }) => ({
+    data: Object.fromEntries(Object.entries(file).filter(([key]) => fields.split(",").includes(key))),
+  });
+  return { files: { get } } as unknown as drive_v3.Drive;
+}
+
+async function testNotAGoogleDoc(): Promise<void> {
+  const doc = "application/vnd.google-apps.document";
+  const sheet = "application/vnd.google-apps.spreadsheet";
+
+  assert.equal((await getDocumentInfo(fakeDrive(doc), "file1")).name, "Budget");
+  await assert.rejects(getDocumentInfo(fakeDrive(sheet), "file1"), /not a Google Doc \(mimeType .*spreadsheet\)/);
+
+  // The Docs API has its own error for a Sheet: the check must answer first, not race it.
+  let docsCalls = 0;
+  const docs = {
+    documents: {
+      get: async () => {
+        docsCalls += 1;
+        throw new Error("Docs API error");
+      },
+    },
+  } as unknown as docs_v1.Docs;
+  await assert.rejects(readDocument({ drive: fakeDrive(sheet), docs }, "file1", true), /not a Google Doc/);
+  assert.equal(docsCalls, 0);
+  console.log("✔ file type: a bare ID of another file type is refused before reading it");
+}
+
+function testQuotedTextEntities(): void {
+  const escaped = "AND CreateAt &gt; :ChannelMemberLastViewedAt";
+  const plain = "AND CreateAt > :ChannelMemberLastViewedAt";
+  const comment = normalizeComment({
+    id: "DDDD",
+    content: "Isn't this &gt; a typo?",
+    quotedFileContent: { mimeType: "text/html", value: escaped },
+    replies: [{ id: "r1", content: "A &amp; B" }],
+  });
+
+  assert.equal(comment.quotedText, plain);
+  assert.equal(findContext(["SELECT *", `WHERE x ${plain} LIMIT 1`], comment.quotedText!)?.paragraphIndex, 1);
+  assert.match(formatComment(comment), /^> AND CreateAt > :Channel/m);
+
+  const quote = (value: string) => normalizeComment({ quotedFileContent: { value } }).quotedText;
+  assert.equal(quote("it&#39;s &quot;R&amp;D&quot; &#x2014; caf&eacute;"), `it's "R&D" — café`);
+  assert.equal(quote("&amp;lt;"), "&lt;", "decoded once, not twice");
+  assert.equal(quote("R&D &copy 2026"), "R&D &copy 2026", "text that isn't an entity stays");
+
+  // Drive's reference calls these plain text, so a literal "&gt;" typed by someone stays as typed.
+  assert.equal(comment.content, "Isn't this &gt; a typo?");
+  assert.equal(comment.replies[0]?.content, "A &amp; B");
+  console.log("✔ quoted text: HTML entities decoded once, comment and reply text left as they are");
+}
+
+function testCommentAuthorsWithoutEmail(): void {
+  // Drive's reference: a comment or reply author's "email address and permission ID will not be populated".
+  const comment = normalizeComment({
+    id: "CCCC",
+    createdTime: "2026-09-22T08:00:00.000Z",
+    content: "Looks good.",
+    author: { displayName: "Ana", me: false },
+    replies: [{ id: "r1", createdTime: "2026-09-22T09:00:00.000Z", content: "Thanks", author: { displayName: "Jose", me: true } }],
+  });
+  assert.equal(comment.author.email, undefined);
+  const md = formatComment(comment);
+  assert.match(md, /OPEN — Ana · 2026-09-22 08:00 UTC/);
+  assert.match(md, /- Jose \(you\) · 2026-09-22 09:00 UTC: Thanks/);
+  assert.deepEqual(
+    summarizeComments([comment]).byAuthor.map((a) => a.name),
+    ["Ana", "Jose"],
+  );
+  console.log("✔ comment authors: rendered and counted by display name when Drive returns no email");
+}
+
+function testContextLimits(): void {
+  // The README's "Limits" section states these.
+  assert.equal(findContext(["a short one"], "short"), undefined, "quotes under 8 characters get no paragraph");
+  assert.equal(findContext(["same words here", "same words here"], "same words")?.paragraphIndex, 0, "first match");
+  assert.equal(findContext(["the text was edited"], "the text as written"), undefined);
+  const trimmed = findContext(["x".repeat(1000) + " needle text"], "needle text");
+  assert.ok(trimmed && trimmed.paragraph.length <= 602, "paragraphs over 600 characters are trimmed");
+  assert.match(trimmed.paragraph, /needle text/);
+  console.log("✔ context lookup limits: first match, 8-character minimum, 600-character trim");
+}
+
+function testVersionsAgree(): void {
+  const read = (file: string) => JSON.parse(readFileSync(path.join(here, "..", file), "utf8"));
+  const pkg = read("package.json");
+  const lock = read("package-lock.json");
+  const registry = read("server.json");
+  const versions = {
+    "package-lock.json": lock.version,
+    'package-lock.json packages[""]': lock.packages[""].version,
+    "server.json": registry.version,
+    "server.json packages[0]": registry.packages[0].version,
+    "src/config.ts": SERVER_VERSION,
+  };
+  for (const [where, version] of Object.entries(versions)) {
+    assert.equal(version, pkg.version, `${where} must match package.json`);
+  }
+  console.log(`✔ versions: ${pkg.version} everywhere`);
+}
+
 testFormatting();
+testSignInCommand();
+await testNotAGoogleDoc();
+testQuotedTextEntities();
+testCommentAuthorsWithoutEmail();
+testContextLimits();
+testVersionsAgree();
+testExpiredSignInMessage();
 await testServerWithoutCredentials();
+await testExpiredSignIn();
 console.log("All smoke checks passed.");
