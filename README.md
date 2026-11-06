@@ -12,6 +12,8 @@ Its job is to explain a document's **comments** to an AI assistant (Claude or an
 who wrote each one, when, on which piece of text, whether it is open or resolved, the complete reply thread,
 and who resolved it.
 
+![An assistant reads a document's comments through the server and lists what is unanswered, undecided and pending](docs/demo.gif)
+
 - **Read-only by design.** It only requests the `documents.readonly` and `drive.readonly` scopes. There is no tool
   that creates, edits, resolves or deletes anything, and every tool is advertised with `readOnlyHint: true`.
 - **OAuth 2.0 sign-in.** Users authenticate with their own Google account through the desktop-app flow with PKCE.

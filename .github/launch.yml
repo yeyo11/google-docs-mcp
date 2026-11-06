@@ -19,3 +19,6 @@ publishing:
   youtube: off
   githubDiscussions: off
   reddit: off
+
+assets:
+  demo: docs/demo.gif

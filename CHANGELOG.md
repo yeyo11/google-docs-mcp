@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [0.1.2] - 2026-11-06
 
+### Added
+
+- A demo GIF in the README: a replay of a real run on a public document, with the names anonymised.
+
 ### Fixed
 
 - Sign-in messages, including `get_auth_status` and the server's instructions, gave `npm run auth`, which doesn't exist
