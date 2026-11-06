@@ -21,6 +21,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   tools now say the sign-in expired and give the sign-in command, instead of returning a bare `invalid_grant`. The
   running server then picks up the new sign-in without a restart.
 
+### Security
+
+- Dependencies updated to clear every `npm audit --omit=dev` advisory: `@modelcontextprotocol/sdk` 1.32.2 and `zod`
+  4.6.7, now the minimum versions in `package.json`, plus the transitive `@hono/node-server`, `body-parser`, `fast-uri`,
+  `hono`, `ip-address` and `qs`.
+
 ### Documentation
 
 - README: External OAuth consent screens in Testing mode have to sign in again every seven days.
