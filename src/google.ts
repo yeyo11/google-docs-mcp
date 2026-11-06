@@ -1,3 +1,4 @@
+import { decodeHTMLStrict } from "entities";
 import { google, type docs_v1, type drive_v3 } from "googleapis";
 import { AuthError, getAuthorizedClient, resetAuthorizedClient } from "./auth.js";
 import { signInCommand } from "./config.js";
@@ -126,7 +127,8 @@ function toReply(r: drive_v3.Schema$Reply): CommentReply {
 export function normalizeComment(c: drive_v3.Schema$Comment): DocComment {
   const replies = (c.replies ?? []).map(toReply);
   const resolveReply = [...replies].reverse().find((r) => r.action === "resolve");
-  const quoted = c.quotedFileContent?.value?.trim();
+  // Drive returns the quote HTML-escaped. content, by Drive's reference, is plain text and stays as it is.
+  const quoted = decodeHTMLStrict(c.quotedFileContent?.value ?? "").trim();
   return {
     id: c.id ?? "",
     author: toPerson(c.author),

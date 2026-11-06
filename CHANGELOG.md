@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The "not a Google Doc" check never fired, because `mimeType` wasn't requested from Drive. A bare ID of a Sheet, Slides
   deck or any other file is now refused by every tool that takes a document, including the comment tools, which used
   to let it through. `get_document` runs the check before calling the Docs API.
+- Quoted text arrived HTML-escaped from Drive (`&gt;` for `>`) and was shown that way, which also stopped the surrounding
+  paragraph from being found for any quote with an entity in its first characters. It's now decoded, using the
+  `entities` package, a new dependency with no dependencies of its own.
 - When Google answers `invalid_grant` (a refresh token expired or revoked, such as the seven-day limit in Testing mode),
   tools now say the sign-in expired and give the sign-in command, instead of returning a bare `invalid_grant`. The
   running server then picks up the new sign-in without a restart.

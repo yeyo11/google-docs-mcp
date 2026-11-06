@@ -248,6 +248,31 @@ async function testNotAGoogleDoc(): Promise<void> {
   console.log("✔ file type: a bare ID of another file type is refused before reading it");
 }
 
+function testQuotedTextEntities(): void {
+  const escaped = "AND CreateAt &gt; :ChannelMemberLastViewedAt";
+  const plain = "AND CreateAt > :ChannelMemberLastViewedAt";
+  const comment = normalizeComment({
+    id: "DDDD",
+    content: "Isn't this &gt; a typo?",
+    quotedFileContent: { mimeType: "text/html", value: escaped },
+    replies: [{ id: "r1", content: "A &amp; B" }],
+  });
+
+  assert.equal(comment.quotedText, plain);
+  assert.equal(findContext(["SELECT *", `WHERE x ${plain} LIMIT 1`], comment.quotedText!)?.paragraphIndex, 1);
+  assert.match(formatComment(comment), /^> AND CreateAt > :Channel/m);
+
+  const quote = (value: string) => normalizeComment({ quotedFileContent: { value } }).quotedText;
+  assert.equal(quote("it&#39;s &quot;R&amp;D&quot; &#x2014; caf&eacute;"), `it's "R&D" — café`);
+  assert.equal(quote("&amp;lt;"), "&lt;", "decoded once, not twice");
+  assert.equal(quote("R&D &copy 2026"), "R&D &copy 2026", "text that isn't an entity stays");
+
+  // Drive's reference calls these plain text, so a literal "&gt;" typed by someone stays as typed.
+  assert.equal(comment.content, "Isn't this &gt; a typo?");
+  assert.equal(comment.replies[0]?.content, "A &amp; B");
+  console.log("✔ quoted text: HTML entities decoded once, comment and reply text left as they are");
+}
+
 function testCommentAuthorsWithoutEmail(): void {
   // Drive's reference: a comment or reply author's "email address and permission ID will not be populated".
   const comment = normalizeComment({
@@ -300,6 +325,7 @@ function testVersionsAgree(): void {
 testFormatting();
 testSignInCommand();
 await testNotAGoogleDoc();
+testQuotedTextEntities();
 testCommentAuthorsWithoutEmail();
 testContextLimits();
 testVersionsAgree();
