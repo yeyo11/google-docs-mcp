@@ -5,14 +5,15 @@
  *  3. Exercises comment normalization, summary and formatting with fixture data.
  */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import type { docs_v1, drive_v3 } from "googleapis";
-import { SERVER_VERSION, signInCommand } from "../src/config.js";
+import { SCOPES, SERVER_VERSION, signInCommand } from "../src/config.js";
 import {
+  describeError,
   getDocumentInfo,
   normalizeComment,
   findContext,
@@ -67,6 +68,70 @@ async function testServerWithoutCredentials(): Promise<void> {
 
   await client.close();
   console.log(`✔ server: ${tools.length} read-only tools, auth errors handled gracefully`);
+}
+
+/** Over stdio, with Google's endpoints stubbed: an expired sign-in, then signing in again without a restart. */
+async function testExpiredSignIn(): Promise<void> {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "gdocs-mcp-smoke-"));
+  const writeToken = (refresh_token: string) =>
+    writeFileSync(
+      path.join(dir, "token.json"),
+      JSON.stringify({ refresh_token, scope: SCOPES.join(" "), token_type: "Bearer" }),
+    );
+  writeToken("expired");
+
+  const transport = new StdioClientTransport({
+    command: "node",
+    args: [
+      "--import",
+      "tsx",
+      "--import",
+      path.join(here, "fixtures", "fake-google.mjs"),
+      path.join(here, "..", "src", "index.ts"),
+    ],
+    env: {
+      PATH: process.env.PATH ?? "",
+      GOOGLE_DOCS_MCP_CONFIG_DIR: dir,
+      GOOGLE_CLIENT_ID: "fake-client",
+      GOOGLE_CLIENT_SECRET: "fake-secret",
+    },
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "smoke", version: "0.0.0" });
+  await client.connect(transport);
+  const status = async () => {
+    const res = await client.callTool({ name: "get_auth_status", arguments: {} });
+    return { isError: res.isError, text: (res.content as Array<{ text?: string }>)[0]?.text ?? "" };
+  };
+
+  try {
+    const expired = await status();
+    assert.equal(expired.isError, true);
+    assert.match(expired.text, /sign-in has expired or was revoked/);
+    assert.match(expired.text, /`npm run auth`/); // this test runs from a clone
+
+    // The user signs in from a terminal: the running server has to pick up the new token.
+    writeToken("valid");
+    const renewed = await status();
+    assert.equal(renewed.isError, undefined, renewed.text);
+    assert.match(renewed.text, /Signed in as Ana/);
+  } finally {
+    await client.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+  console.log("✔ expired sign-in: invalid_grant gives the sign-in command, and a new sign-in works without a restart");
+}
+
+function testExpiredSignInMessage(): void {
+  // error_subtype is how Google reports a session control policy; the library puts the whole body in the message.
+  const reauth = { message: '{"error":"invalid_grant","error_subtype":"invalid_rapt"}', response: { status: 400 } };
+  const plain = { message: "invalid_grant", response: { status: 400, data: { error: "invalid_grant" } } };
+  for (const err of [reauth, plain]) {
+    assert.match(describeError(err), /sign-in has expired or was revoked/);
+    assert.match(describeError(err), /seven days/);
+  }
+  assert.doesNotMatch(describeError({ message: "boom", response: { status: 400 } }), /sign-in/);
+  console.log("✔ expired sign-in message: every shape of invalid_grant");
 }
 
 function testFormatting(): void {
@@ -238,5 +303,7 @@ await testNotAGoogleDoc();
 testCommentAuthorsWithoutEmail();
 testContextLimits();
 testVersionsAgree();
+testExpiredSignInMessage();
 await testServerWithoutCredentials();
+await testExpiredSignIn();
 console.log("All smoke checks passed.");

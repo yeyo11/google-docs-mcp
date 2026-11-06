@@ -1,5 +1,5 @@
 import { google, type docs_v1, type drive_v3 } from "googleapis";
-import { AuthError, getAuthorizedClient } from "./auth.js";
+import { AuthError, getAuthorizedClient, resetAuthorizedClient } from "./auth.js";
 import { signInCommand } from "./config.js";
 
 // ---------------------------------------------------------------------------
@@ -24,6 +24,12 @@ export function getClients(): Promise<Clients> {
       throw err;
     });
   return clientsPromise;
+}
+
+/** Drops the clients built from the stored token, for when Google has refused it. */
+export function resetClients(): void {
+  clientsPromise = undefined;
+  resetAuthorizedClient();
 }
 
 const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
@@ -353,15 +359,40 @@ export function attachContext(comments: DocComment[], docText: DocumentText): vo
 interface GaxiosLike {
   message?: string;
   code?: number | string;
-  response?: { status?: number; data?: { error?: { message?: string } } };
+  // Google's APIs answer with error.message; its token endpoint with error: "invalid_grant".
+  response?: { status?: number; data?: { error?: string | { message?: string } } };
+}
+
+/** Google refused the refresh token: it expired or was revoked, and only a new sign-in fixes that. */
+function isInvalidGrant(err: unknown): boolean {
+  const e = (err ?? {}) as GaxiosLike;
+  // On a session control policy the library replaces the message with the JSON body, so match within it.
+  return e.response?.data?.error === "invalid_grant" || (e.message ?? "").includes("invalid_grant");
+}
+
+function errorStatus(e: GaxiosLike): number {
+  return e.response?.status ?? (typeof e.code === "number" ? e.code : Number(e.code));
+}
+
+/** Whether Google refused the stored credentials, so the user has been told to sign in again. */
+export function needsNewSignIn(err: unknown): boolean {
+  return isInvalidGrant(err) || errorStatus((err ?? {}) as GaxiosLike) === 401;
 }
 
 /** Turns googleapis/auth errors into an actionable message for the MCP consumer. */
 export function describeError(err: unknown): string {
   if (err instanceof AuthError) return err.message;
   const e = (err ?? {}) as GaxiosLike;
-  const status = e.response?.status ?? (typeof e.code === "number" ? e.code : Number(e.code));
-  const apiMessage = e.response?.data?.error?.message ?? e.message ?? String(err);
+  const status = errorStatus(e);
+  const apiError = e.response?.data?.error;
+  const apiMessage = (typeof apiError === "object" ? apiError.message : undefined) ?? e.message ?? String(err);
+
+  if (isInvalidGrant(err)) {
+    return (
+      `Your Google sign-in has expired or was revoked (invalid_grant). Run ${signInCommand()} to sign in again. ` +
+      "With an External OAuth consent screen in Testing mode, Google ends the sign-in after seven days."
+    );
+  }
 
   switch (status) {
     case 401:

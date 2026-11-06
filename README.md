@@ -92,9 +92,10 @@ A document's owner and last editor show an email when Google
 > **External apps in Testing mode have to sign in again every seven days.** With an *External* consent screen whose
 > publishing status is *Testing*, Google
 > [issues a refresh token that expires in 7 days](https://developers.google.com/identity/protocols/oauth2#expiration),
-> so automatic renewal stops working and tools fail with an authorization error until you repeat step 2. An *Internal*
-> consent screen (Workspace organizations only) doesn't have this limit. Neither does publishing the app (*In
-> production*), but `drive.readonly` is a restricted scope, so Google then
+> so automatic renewal stops working and tools report that the sign-in expired until you repeat step 2. The running
+> server picks up the new sign-in without a restart. An *Internal* consent screen (Workspace organizations only) doesn't
+> have this limit. Neither does publishing the app (*In production*), but `drive.readonly` is a restricted scope, so
+> Google then
 > [shows an unverified-app warning and caps the project at 100 users](https://support.google.com/cloud/answer/15549945)
 > unless the app is verified.
 

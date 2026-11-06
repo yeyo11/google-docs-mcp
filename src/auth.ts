@@ -88,6 +88,11 @@ export function getAuthorizedClient(): Promise<OAuth2Client> {
   return cachedClient;
 }
 
+/** Makes the next call read the token file again, so a new sign-in works without restarting the server. */
+export function resetAuthorizedClient(): void {
+  cachedClient = undefined;
+}
+
 async function buildAuthorizedClient(): Promise<OAuth2Client> {
   const secrets = await loadClientSecrets();
   const stored = await readStoredTokens();

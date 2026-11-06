@@ -20,8 +20,10 @@ import {
   listAllComments,
   listCommentsPage,
   listDocuments,
+  needsNewSignIn,
   parseDocumentId,
   readDocument,
+  resetClients,
   type DocComment,
 } from "./google.js";
 import { summarizeComments } from "./summary.js";
@@ -53,6 +55,7 @@ function safe<A>(fn: (args: A) => Promise<CallToolResult>): (args: A) => Promise
     try {
       return await fn(args);
     } catch (err) {
+      if (needsNewSignIn(err)) resetClients();
       return { isError: true, content: [{ type: "text", text: describeError(err) }] };
     }
   };
