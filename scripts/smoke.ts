@@ -182,8 +182,41 @@ async function testNotAGoogleDoc(): Promise<void> {
   console.log("✔ file type: a bare ID of another file type is refused before reading it");
 }
 
+function testCommentAuthorsWithoutEmail(): void {
+  // Drive's reference: a comment or reply author's "email address and permission ID will not be populated".
+  const comment = normalizeComment({
+    id: "CCCC",
+    createdTime: "2026-09-22T08:00:00.000Z",
+    content: "Looks good.",
+    author: { displayName: "Ana", me: false },
+    replies: [{ id: "r1", createdTime: "2026-09-22T09:00:00.000Z", content: "Thanks", author: { displayName: "Jose", me: true } }],
+  });
+  assert.equal(comment.author.email, undefined);
+  const md = formatComment(comment);
+  assert.match(md, /OPEN — Ana · 2026-09-22 08:00 UTC/);
+  assert.match(md, /- Jose \(you\) · 2026-09-22 09:00 UTC: Thanks/);
+  assert.deepEqual(
+    summarizeComments([comment]).byAuthor.map((a) => a.name),
+    ["Ana", "Jose"],
+  );
+  console.log("✔ comment authors: rendered and counted by display name when Drive returns no email");
+}
+
+function testContextLimits(): void {
+  // The README's "Limits" section states these.
+  assert.equal(findContext(["a short one"], "short"), undefined, "quotes under 8 characters get no paragraph");
+  assert.equal(findContext(["same words here", "same words here"], "same words")?.paragraphIndex, 0, "first match");
+  assert.equal(findContext(["the text was edited"], "the text as written"), undefined);
+  const trimmed = findContext(["x".repeat(1000) + " needle text"], "needle text");
+  assert.ok(trimmed && trimmed.paragraph.length <= 602, "paragraphs over 600 characters are trimmed");
+  assert.match(trimmed.paragraph, /needle text/);
+  console.log("✔ context lookup limits: first match, 8-character minimum, 600-character trim");
+}
+
 testFormatting();
 testSignInCommand();
 await testNotAGoogleDoc();
+testCommentAuthorsWithoutEmail();
+testContextLimits();
 await testServerWithoutCredentials();
 console.log("All smoke checks passed.");
