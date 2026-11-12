@@ -205,6 +205,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and commit conventions.
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
+An independent review of the server's access and security is on mcprush:
+
+[![Google Docs MCP server](https://mcprush.com/badge/yeyo11-google-docs-mcp/card.svg)](https://mcprush.com/to/yeyo11-google-docs-mcp?ref=badge)
+
 ## Limits
 
 - **Read-only.** It can't create, reply to or resolve comments, or edit documents.
